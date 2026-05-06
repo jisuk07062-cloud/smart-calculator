@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>단위변환 가성비 계산기</title>
+    <style>
+        :root {
+            --bg: #f8f9fa;
+            --card: #ffffff;
+            --primary: #4a90e2;
+            --win: #27ae60;
+            --text: #333;
+        }
+
+        body {
+            font-family: 'Pretendard', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .wrapper { width: 100%; max-width: 700px; }
+        .main-title { text-align: center; margin-bottom: 20px; }
+        
+        .subject-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+        }
+
+        .compare-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        @media (max-width: 600px) { .compare-grid { grid-template-columns: 1fr; } }
+
+        .card {
+            background: var(--card);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            border: 3px solid transparent;
+        }
+
+        .card.winner { border-color: var(--win); background-color: #fafffa; }
+
+        h3 { margin: 0 0 15px 0; font-size: 1.1rem; color: #666; }
+
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-size: 0.85rem; font-weight: bold; margin-bottom: 5px; }
+        
+        /* 용량과 단위를 한 줄에 */
+        .size-group { display: flex; gap: 5px; }
+        .size-group input { flex: 2; }
+        .size-group select { flex: 1; border: 1px solid #dfe6e9; border-radius: 8px; padding: 10px; }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #dfe6e9;
+            border-radius: 8px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+
+        .res-box {
+            margin-top: 15px;
+            padding: 12px;
+            background: #f1f3f5;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .calc-btn {
+            width: 100%;
+            margin-top: 20px;
+            padding: 18px;
+            background: #222;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .summary-text {
+            text-align: center;
+            margin-top: 20px;
+            font-weight: bold;
+            color: var(--win);
+            min-height: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="wrapper">
+    <div class="main-title">
+        <h1>⚖️ 가성비 비교 계산기</h1>
+    </div>
+
+    <input type="text" class="subject-input" placeholder="비교할 상품 (예: 간장, 세제)">
+
+    <div class="compare-grid">
+        <!-- 상품 1 -->
+        <div class="card" id="box-A">
+            <h3>상품 1</h3>
+            <div class="form-group">
+                <label>가격</label>
+                <input type="text" id="price-A" placeholder="예: 5000">
+            </div>
+            <div class="form-group">
+                <label>용량</label>
+                <div class="size-group">
+                    <input type="text" id="size-A" placeholder="예: 500">
+                    <select id="unit-A">
+                        <option value="g">g/ml</option>
+                        <option value="L">L</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>개수</label>
+                <input type="number" id="count-A" value="1" min="1">
+            </div>
+            <div class="res-box" id="res-A">100당 가격</div>
+        </div>
+
+        <!-- 상품 2 -->
+        <div class="card" id="box-B">
+            <h3>상품 2</h3>
+            <div class="form-group">
+                <label>가격</label>
+                <input type="text" id="price-B" placeholder="예: 12000">
+            </div>
+            <div class="form-group">
+                <label>용량</label>
+                <div class="size-group">
+                    <input type="text" id="size-B" placeholder="예: 1.8">
+                    <select id="unit-B">
+                        <option value="g">g/ml</option>
+                        <option value="L" selected>L</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>개수</label>
+                <input type="number" id="count-B" value="1" min="1">
+            </div>
+            <div class="res-box" id="res-B">100당 가격</div>
+        </div>
+    </div>
+
+    <div class="summary-text" id="final-msg"></div>
+
+    <button class="calc-btn" onclick="calculate()">가성비 비교하기</button>
+</div>
+
+<script>
+    function getNum(id) {
+        const val = document.getElementById(id).value;
+        const cleaned = val.replace(/[^0-9.]/g, "");
+        return parseFloat(cleaned) || 0;
+    }
+
+    function calculate() {
+        const results = ['A', 'B'].map(id => {
+            const price = getNum(`price-${id}`);
+            let size = getNum(`size-${id}`);
+            const count = Math.max(1, getNum(`count-${id}`));
+            const unit = document.getElementById(`unit-${id}`).value;
+
+            // L(리터) 선택 시 ml 단위로 환산
+            if (unit === 'L') {
+                size = size * 1000;
+            }
+
+            const totalSize = size * count;
+            const unitPrice = totalSize > 0 ? (price / totalSize) * 100 : 0;
+
+            return { id, unitPrice };
+        });
+
+        const boxA = document.getElementById('box-A');
+        const boxB = document.getElementById('box-B');
+        const msg = document.getElementById('final-msg');
+
+        boxA.classList.remove('winner');
+        boxB.classList.remove('winner');
+
+        document.getElementById('res-A').innerText = `100당 ${Math.round(results[0].unitPrice).toLocaleString()}원`;
+        document.getElementById('res-B').innerText = `100당 ${Math.round(results[1].unitPrice).toLocaleString()}원`;
+
+        if (results[0].unitPrice > 0 && results[1].unitPrice > 0) {
+            const diff = Math.abs(Math.round(results[0].unitPrice - results[1].unitPrice));
+            if (results[0].unitPrice < results[1].unitPrice) {
+                boxA.classList.add('winner');
+                msg.innerText = `상품 1이 100당 ${diff.toLocaleString()}원 더 저렴해요!`;
+            } else if (results[1].unitPrice < results[0].unitPrice) {
+                boxB.classList.add('winner');
+                msg.innerText = `상품 2이 100당 ${diff.toLocaleString()}원 더 저렴해요!`;
+            } else {
+                msg.innerText = "가성비가 똑같습니다!";
+            }
+        }
+    }
+</script>
+</body>
+</html>
